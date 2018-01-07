@@ -32,9 +32,11 @@ Camera calibration was accomplished using images from the raw camera feed of a 9
 The camera calibration is carried out in the get_camera_calibration_coefficients function in my program. This function first checks to see if the camera calibration coefficients have previously been saved to a pickle file. In the case that no previous coefficients have been saved, the calibration is carried out and they are then saved to a pickle file for future use. Incidentally, this function also returns the warping parameter M, which is used to transform the perspective of a head-one image to a top-view perspective. Seen below is an example of the raw camera feed image of the chessboard and the resulting undistorted image. 
 
 Raw Camera Image
+
 ![alt text][image1]
 
 Resulting Undistorted Camera Image
+
 ![alt text][image2]
 
 ### Pipeline (single images)
@@ -60,9 +62,11 @@ gray_binary[(v_binary==1) | (sxbinary==1) | (h_binary==1)] = 1
 For example, here is an original image and the resulting image when the threshold is applied: 
 
 Original Image:
+
 ![alt text][image3]
 
 Resulting binary image after threshold is applied:
+
 ![alt text][image4]
 
 
@@ -78,9 +82,11 @@ M = cv2.getPerspectiveTransform(src, dst)
 '''
 
 Below is the warped and undistorted image using the same image from the example above. 
+
 ![alt text][image5]
 
 And for verification, here is the warped and undistorted for an image with straight lanes: 
+
 ![alt text][image6]
 
 #### 3. Identify the pixels of the left and right lanes, and get the best polynomial fit for each lane 
