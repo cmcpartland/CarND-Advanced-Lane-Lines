@@ -17,9 +17,11 @@ The goals / steps of this project are the following:
 [image2]: ./output_images/fig1.png "Resulting Undistorted Image"
 [image3]: ./output_images/fig2original.jpg "Original road image"
 [image4]: ./output_images/fig2result.jpg "Result road image"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+[image5]: ./output_images/fig3.jpg 
+[image6]: ./output_images/fig4.jpg 
+[image7]: ./output_images/fig5.jpg 
+[image8]: ./output_images/fig6.jpg 
+[video1]: ./annotated_videos/project_video_annotated.mp4 "Video"
 
 ### Camera Calibration
 
@@ -64,73 +66,88 @@ Resulting binary image after threshold is applied:
 ![alt text][image4]
 
 
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![alt text][image2]
+#### 2. Undistort and warp the image to top-view perspective 
 
-#### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
+Using the camera calibration parameters and the warping parameter, the image is then undistorted and warped to a top-view perspective. The warping parameter was generated in the 
+get_camera_calibration_coefficients function using a test image of a road with straight lanes as a reference. The source points in the image were defined as the points where the lanes met the bottom of the image, and two points along each lane further along the road. The destination points were defined as the set of four points that would pull the left and right lanes straight to make them parallel to one another.  
+The warping parameter M provides the transformation to move the source points to the destination points, such that the head-on perspective is transformed to a top-view perspective. Here is the code for this process: 
+'''sh
+src = np.float32([[275,660],[540,484],[740,484],[1010,660]]) 
+dst = np.float32([[275, 660],[275,275],[1010,275],[1010,660]]) 
+M = cv2.getPerspectiveTransform(src, dst) 
+'''
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
-
-![alt text][image3]
-
-#### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
-
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
-
-```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
-```
-
-This resulted in the following source and destination points:
-
-| Source        | Destination   | 
-|:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
-
-I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
-
-![alt text][image4]
-
-#### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
-
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
-
+Below is the warped and undistorted image using the same image from the example above. 
 ![alt text][image5]
 
-#### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
-
-I did this in lines # through # in my code in `my_other_file.py`
-
-#### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
-
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
-
+And for verification, here is the warped and undistorted for an image with straight lanes: 
 ![alt text][image6]
 
----
+#### 3. Identify the pixels of the left and right lanes, and get the best polynomial fit for each lane 
 
-### Pipeline (video)
+The left and right lanes are both identified and fit with a polynomial in the return_polyfit function.  
 
-#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
+The base of the left and right lanes are identified by performing convolutions on the pixels in the lower left corner and lower right corner of the image. The array index belonging to the max value in each of these convolutions is identified as the base of the left lane and the base of the right lane. Once the base is identified, the image is split up into 8 horizontal slices and the same convolutions are performed for each slice. For efficiency, the subsequent convolutions are centered on the previously identified position of the left/right lane and extends to the left and right by a set margin instead of searching across the entire horizontal width of the image.  
+The return_polyfit function also implements a look-ahead filter, where the location of the left and right lanes at the top of the previous frame are used as the known locations of the left and right lanes in the next frame. Using the look-ahead filter, the convolution don’t need to be performed across the entire width of the image but instead only need to be performed around the known locations of the left and right lanes. 
 
-Here's a [link to my video result](./project_video.mp4)
+To create a best polynomial fit, the pixels belonging to the left and right lanes need to be identified. To do this, the function identifies the pixels within a small box that is centered on the center point for each lane in each of the 8 horizontal slices. Once the pixels for the left and right lanes are known, np.polyfit is used to return the coefficients for a 2nd degree polynomial.  
+
+Here is the resulting image the polynomial fit is applied: 
+
+![alt text][image7]
+
+Next, the polynomial coefficients for each lane are returned to the process_image function. The points on the left and right lanes are generated across the entire vertical length of the image using the 2nd degree polynomial function, 𝑓(𝑦)=𝐴𝑦2+𝐵𝑦+𝐶. 
+
+
+#### 4. Check polynomial fits for usability 
+
+The return_polyfit function checks to see if a good fit was generated by making sure that the left and right lanes actually contain pixels inside the rectangular margin around the fit lines. If no pixels are found for either fit, then None is returned for both sets of polynomial coefficients. 
+
+#### 5. Find the radii of curvature and offset of vehicle from the center of the lane 
+
+The radii of curvature or the lanes is calculated between lines 302 and 306, and the offset of the vehicle’s position from the center of the lane is calculated on line 269. 
+
+#### 6.If fits are usable, do a sanity check on the separation between the left and right lanes. 
+
+Now that points for each lane have been generated, sanity checks can be performed to make sure the results are reasonable. A reliable result was defined as having both a reasonable separation between each lane, i.e. ~3.7 meters or between 675 and 800 pixels, and a curvature greater than 250 meters for both lanes.  
+
+#### 7. If data is good, add to averaging array. Averaging array contains n_samples with first-in-first-out structure 
+
+When the results are satisfactory, they are added to an array of the previous 10 values, which are then averaged to generate the final left and right polynomial fits. 
+
+#### 8. If fits are not usable, continue using the previous average values 
+
+If the results are not satisfactory, don’t add them to the array of previous values, and instead use the averaged values to generate the left and right lane polynomial fits. If the results are not satisfactory for five frames in a row, then revert to doing a full window search to find the lane lines. 
+
+#### 9. Apply a mask of the lane identification over the original video feed 
+
+A mask that outlines the identified lane is superimposed on the original video feed: 
+![alt text][image8]
+
+
+
+###  Results 
+The final processed video ‘project_video_annotated.mp4’ can be found in the ‘annotated_videos’ folder. The images above demonstrating each step in the process_image pipeline can be found in the ‘output_images’ folder.  
+
+Here's a [link to my video result](./annotated_videos/project_video_annotated.mp4)
 
 ---
 
 ### Discussion
 
-#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+#### Problems / Issues
+Choosing the correct thresholding parameters to create the binary image was fairly challenging. After finding a set of parameters that worked on one image, it was usually the case that the thresholding would fail on an image that had different lighting conditions or different lane marker colors. Choosing the most robust thresholding that applied to all the test images took a good amount of trial and error. Beyond that, even though the test image binaries looked effective, it turned out that these threshold values did not hold up in the more challenging areas of the project video and the parameters had to be tuned again. 
+ 
+Increasing the robustness of the image processing algorithm took a few quality gates. First, there was the possibility that the polynomial fit completely failed for one lane or the other, and in this case the numpy polyfit function gives a fatal error. This had to be correctly handled so that the process could be continued. Next, even if the fit was carried out, it had to be checked that the values were sensible and could be used. Finally, if the fit performance was poor for several frames in a row the algorithm had to divert back to a broader but less efficient search for lane markers. I wanted to make sure that even when the conditions were adverse and the fit completely failed, that the process continued in a safe and reasonable fashion. 
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+#### Future Improvements
+1)	Handle polynomial fit failures for each lane separately 
+In the current implementation, when the polynomial fit fails for either lane then I decide that the entire fit has failed and the data should not be used. The fallback in this case is to use the average values from previous frames to create the fit lines, which uses the assumption that the lane markers in the next five frames are similar to the lane markers in the previous ten frames. In practice, this is effective for roads where the thresholding is successful, but in reality this can become a safety issue in areas where the thresholding is less successful. 
+
+To increase robustness, I would like to consider the quality of the fit for each lane separately. If the left lane fit was successful but the right lane fit was poor, then I would assume the right lane was shaped like the left lane. In most cases we expect both lanes to be shaped similarly. For lane-keeping applications it is better to base your positioning off of the lane that has been more confidently identified instead of just assuming the road ahead is similar to the road behind you. 
+
+2)	Increase thresholding performance and implement region masking 
+The thresholding procedure is unsuccessful on the challenge videos. I’m sure the thresholding can be improved to perform better in difficult situations, and region masking will be effective at eliminating falsely detecting line shapes in the middle of lanes. 
+
+
+
