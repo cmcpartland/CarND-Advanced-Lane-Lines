@@ -1,4 +1,4 @@
-## Advanced Lane Finding Projec
+## Advanced Lane Finding Project
 
 The goals / steps of this project are the following:
 
@@ -13,7 +13,7 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./camera_cal/calibration1.png "Undistorted"
+[image1]: ./camera_cal/calibration1.jpg "Undistorted"
 [image2]: ./output_images/fig1.png "Resulting Undistorted Image"
 [image3]: ./output_images/fig2original.jpg "Original road image"
 [image4]: ./output_images/fig2result.jpg "Result road image"
