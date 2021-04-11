@@ -10,7 +10,6 @@ from moviepy.editor import VideoFileClip
 Function to calibrate the camera feed. 
 Attempts to read saved calibration coefficients, 
 and if no coefficients have been saved previously then new ones are created and saved.
-Test comment added here on Apr 11, 2021
 """
 def get_camera_calibration_coefficients():
 	try:
